@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Panda CSS 2 plugin that generates Qwik 2 JSX artifacts (styled factory, patterns, recipe contexts, types)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielgrant/pandacss-plugin-qwik.git"
+  },
+  "keywords": [
+    "pandacss",
+    "panda-plugin",
+    "qwik"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
