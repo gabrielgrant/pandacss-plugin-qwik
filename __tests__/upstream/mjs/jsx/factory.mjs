@@ -1,0 +1,92 @@
+import { jsx } from '@qwik.dev/core';
+import { cx, cva } from '../css/index.mjs';
+import { composeCvaFn, composeShouldForwardProps, getDisplayName, serializeSplitStyles, mergeDefaultProps, splitJsxProps } from './helper.mjs';
+import { isCssProperty } from './is-valid-prop.mjs';
+
+function styledFn(BaseComponent, recipeOrConfig = {}, options = {}) {
+  const recipeFn = recipeOrConfig.__cva__ || recipeOrConfig.__recipe__ ? recipeOrConfig : cva(recipeOrConfig)
+  const composedRecipeFn = composeCvaFn(BaseComponent.__cva__, recipeFn)
+  const getRaw = composedRecipeFn.__memoizedRaw__ || composedRecipeFn.raw
+  const variantKeys = composedRecipeFn.variantKeys
+  const variantSet = new Set(variantKeys)
+  const forwardFn = options.shouldForwardProp || ((prop) => !variantSet.has(prop) && !isCssProperty(prop))
+  const forwardProps = options.forwardProps
+  const forwardPropSet = forwardProps?.length ? new Set(forwardProps) : void 0
+  const shouldForwardProp = forwardPropSet
+    ? (prop) => forwardPropSet.has(prop) || forwardFn(prop, variantKeys)
+    : (prop) => forwardFn(prop, variantKeys)
+
+  const dataProps = options.dataAttr && recipeOrConfig.__name__ ? { 'data-recipe': recipeOrConfig.__name__ } : {}
+  const defaultProps = Object.assign(dataProps, options.defaultProps)
+  const hasDefaultProps = Object.keys(defaultProps).length > 0
+
+  const shouldForward = composeShouldForwardProps(BaseComponent, shouldForwardProp)
+  const DefaultElement = BaseComponent.__base__ || BaseComponent
+
+  const PandaComponent = function PandaComponent(props) {
+    const Element = props.as === void 0 ? DefaultElement : props.as
+    const unstyled = props.unstyled
+    const children = props.children
+    let combinedProps = props
+    if (hasDefaultProps) {
+      const { as, unstyled, children, ...restProps } = props
+      combinedProps = mergeDefaultProps(defaultProps, restProps)
+    }
+    const [htmlProps, forwardedProps, variantProps, propStyles, cssStyles, elementProps] = splitJsxProps(
+      combinedProps,
+      shouldForward,
+      variantSet,
+      isCssProperty,
+      true,
+    )
+    const hasStyles = propStyles || cssStyles !== void 0
+    let className
+    if (unstyled) {
+      className = cx(hasStyles && serializeSplitStyles(propStyles, cssStyles), combinedProps.class, combinedProps.className)
+    } else if (recipeOrConfig.__recipe__) {
+      const compoundVariantClasses = composedRecipeFn.__getCompoundVariantClasses__?.(variantProps)
+      className = cx(
+        composedRecipeFn(variantProps, false),
+        compoundVariantClasses,
+        hasStyles && serializeSplitStyles(propStyles, cssStyles),
+        combinedProps.class, combinedProps.className,
+      )
+    } else {
+      className = cx(
+        hasStyles ? serializeSplitStyles(propStyles, cssStyles, getRaw(variantProps)) : composedRecipeFn(variantProps),
+        combinedProps.class, combinedProps.className,
+      )
+    }
+
+    return jsx(Element, {
+      ...forwardedProps,
+      ...elementProps,
+      ...htmlProps,
+      class: className,
+      children: children ?? combinedProps.children,
+    })
+  }
+
+  const name = getDisplayName(DefaultElement)
+  PandaComponent.displayName = `panda.${name}`
+  PandaComponent.__cva__ = composedRecipeFn
+  PandaComponent.__base__ = DefaultElement
+  PandaComponent.__shouldForwardProps__ = shouldForwardProp
+
+  return PandaComponent
+}
+
+function createJsxFactory() {
+  const cache = new Map()
+  return new Proxy(styledFn, {
+    apply(_, __, args) {
+      return styledFn(...args)
+    },
+    get(_, el) {
+      if (!cache.has(el)) cache.set(el, styledFn(el))
+      return cache.get(el)
+    },
+  })
+}
+
+export const panda = /* @__PURE__ */ createJsxFactory()

@@ -1,31 +1,44 @@
-import type { ModuleFormat } from '../rewrite.js'
+import { render, type JsxStylePropsMode, type ModuleFormat } from './render.js'
 
 export interface PatternInfo {
   jsxName: string
-  rawName: string
-  rawPath: string
-  factoryName: string
+  /** The pattern function, e.g. `stack`, and its module. */
+  fn: string
+  fnPath: string
+  factory: string
   factoryPath: string
-  keys: string
   element: string
-  mode: 'all' | 'minimal' | 'none'
+  mode: JsxStylePropsMode
   mergeCssPath: string | undefined
+  /** TypeScript output only: the props interface and the type imports it needs. */
+  propsName: string
+  propsInterface: string
+  typeImports: string
 }
 
-const mergedProps: Record<PatternInfo['mode'], string> = {
+const mergedProps: Record<JsxStylePropsMode, string> = {
   all: '{ ...styleProps, ...restProps }',
   minimal: '{ ...restProps, css: mergeCss(styleProps, props.css) }',
   none: '{ ...restProps, css: styleProps }',
 }
 
-export const patternModule = (p: PatternInfo, { importExt: x }: ModuleFormat) => `import { jsx } from '@qwik.dev/core';
-import { splitProps } from '../helpers${x}';
-import { ${p.rawName} } from '${p.rawPath}';
-import { ${p.factoryName} } from '${p.factoryPath}';${p.mergeCssPath ? `\nimport { mergeCss } from '${p.mergeCssPath}';` : ''}
+// Mirrors the Qwik pattern components of Panda's native codegen (react_pattern_jsx.rs).
+export const patternModule = (p: PatternInfo, format: ModuleFormat) =>
+  render(
+    `import { jsx } from '@qwik.dev/core';
+import { ${p.fn} } from '${p.fnPath}';
+import { splitProps } from '../helpers${format.importExt}';
+import { ${p.factory} } from '${p.factoryPath}';«
+import type { FunctionComponent } from '@qwik.dev/core';
+${p.typeImports}»${p.mergeCssPath ? `\nimport { mergeCss } from '${p.mergeCssPath}';` : ''}«
 
-export const ${p.jsxName} = function ${p.jsxName}(props) {
-  const [patternProps, restProps] = splitProps(props, ${p.keys})
-  const styleProps = ${p.rawName}(patternProps)
-  return jsx(${p.factoryName}[${p.element}], ${mergedProps[p.mode]})
-}
-`
+${p.propsInterface}»
+
+export const ${p.jsxName}«: FunctionComponent<${p.propsName}>» = function ${p.jsxName}(props«: ${p.propsName}») {
+  const [patternProps, restProps] = splitProps(props, ${p.fn}.propKeys)
+  const styleProps = ${p.fn}.raw(patternProps)
+  const mergedProps = ${mergedProps[p.mode]}
+  return jsx(${p.factory}[${p.element}], mergedProps)
+}`,
+    format,
+  )

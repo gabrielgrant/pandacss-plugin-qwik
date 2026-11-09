@@ -3,9 +3,6 @@ import { cx, cva } from '../css/index';
 import { composeCvaFn, composeShouldForwardProps, getDisplayName, serializeSplitStyles, mergeDefaultProps, splitJsxProps } from './helper';
 import { isCssProperty } from './is-valid-prop';
 
-// Qwik's `class` also takes arrays and objects; keep those for Qwik to resolve
-const mergeClass = (...parts) => (parts.some((part) => part && typeof part !== 'string') ? parts : cx(...parts))
-
 function styledFn(BaseComponent, recipeOrConfig = {}, options = {}) {
   const recipeFn = recipeOrConfig.__cva__ || recipeOrConfig.__recipe__ ? recipeOrConfig : cva(recipeOrConfig)
   const composedRecipeFn = composeCvaFn(BaseComponent.__cva__, recipeFn)
@@ -43,21 +40,29 @@ function styledFn(BaseComponent, recipeOrConfig = {}, options = {}) {
       true,
     )
     const hasStyles = propStyles || cssStyles !== void 0
-    let styles
+    let className
     if (unstyled) {
-      styles = hasStyles && serializeSplitStyles(propStyles, cssStyles)
+      className = cx(hasStyles && serializeSplitStyles(propStyles, cssStyles), combinedProps.class, combinedProps.className)
     } else if (recipeOrConfig.__recipe__) {
       const compoundVariantClasses = composedRecipeFn.__getCompoundVariantClasses__?.(variantProps)
-      styles = cx(composedRecipeFn(variantProps, false), compoundVariantClasses, hasStyles && serializeSplitStyles(propStyles, cssStyles))
+      className = cx(
+        composedRecipeFn(variantProps, false),
+        compoundVariantClasses,
+        hasStyles && serializeSplitStyles(propStyles, cssStyles),
+        combinedProps.class, combinedProps.className,
+      )
     } else {
-      styles = hasStyles ? serializeSplitStyles(propStyles, cssStyles, getRaw(variantProps)) : composedRecipeFn(variantProps)
+      className = cx(
+        hasStyles ? serializeSplitStyles(propStyles, cssStyles, getRaw(variantProps)) : composedRecipeFn(variantProps),
+        combinedProps.class, combinedProps.className,
+      )
     }
 
     return jsx(Element, {
       ...forwardedProps,
       ...elementProps,
       ...htmlProps,
-      class: mergeClass(styles, combinedProps.class, combinedProps.className),
+      class: className,
       children: children ?? combinedProps.children,
     })
   }

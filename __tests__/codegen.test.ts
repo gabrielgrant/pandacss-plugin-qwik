@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { join, resolve } from 'node:path'
 import ts from 'typescript'
 import { afterAll, describe, expect, test } from 'vitest'
+import { rewriteArtifacts } from '../src/rewrite'
 
 const root = resolve(__dirname, '.tmp')
 const pluginEntry = resolve(__dirname, '../src/index.ts')
@@ -34,7 +35,29 @@ const syntaxErrors = (code: string, fileName: string) => {
   return (source as unknown as { parseDiagnostics: ts.Diagnostic[] }).parseDiagnostics.map((d) => d.messageText)
 }
 
+// Output of Panda's native Qwik codegen (gabrielgrant/panda, branch claude/v2-qwik-jsx at e909f7f5)
+// for the same options. The plugin must emit the same files byte for byte.
+const upstream = resolve(__dirname, 'upstream')
+const upstreamCases: Record<string, Record<string, unknown>> = {
+  js: {},
+  ts: { outExtension: 'ts' },
+  mjs: { outExtension: 'mjs', forceImportExtension: true, jsxFactory: 'panda' },
+  'minimal-js': { jsxStyleProps: 'minimal' },
+  'minimal-ts': { jsxStyleProps: 'minimal', outExtension: 'ts' },
+  'none-js': { jsxStyleProps: 'none' },
+  'none-ts': { jsxStyleProps: 'none', outExtension: 'ts' },
+}
+
 describe('pandacss-plugin-qwik', () => {
+  test.each(Object.entries(upstreamCases))('matches the native Qwik output (%s)', async (name, options) => {
+    const { read } = await codegen(options)
+    const files = readdirSync(join(upstream, name), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => join(entry.parentPath, entry.name).slice(join(upstream, name).length + 1))
+    expect(files.length).toBeGreaterThan(0)
+    for (const file of files) expect(read(file), file).toBe(readFileSync(join(upstream, name, file), 'utf8'))
+  })
+
   test('replaces the Solid runtime with Qwik artifacts and keeps Panda helpers', async () => {
     const { read, files } = await codegen()
     const jsxFiles = files.filter((file) => file.startsWith('jsx/') || file === 'types/jsx.d.ts')
@@ -45,26 +68,14 @@ describe('pandacss-plugin-qwik', () => {
       expect(syntaxErrors(code, file), file).toEqual([])
     }
 
-    expect(files).toContain('jsx/context-hosts.qwik.js')
-    expect(read('jsx/factory.js')).toContain("import { jsx } from '@qwik.dev/core';")
-    expect(read('jsx/context-hosts.qwik.js')).toContain('component$(')
-    expect(read('jsx/create-slot-recipe-context.js')).not.toContain('component$')
+    expect(files).toContain('jsx/create-slot-recipe-context.qwik.js')
+    expect(files).toContain('jsx/create-recipe-context.qwik.d.ts')
+    expect(files).not.toContain('jsx/create-slot-recipe-context.js')
+    expect(read('jsx/create-slot-recipe-context.qwik.js')).toContain('component$(')
+    expect(read('jsx/index.js')).toContain("export * from './create-slot-recipe-context.qwik';")
     expect(read('jsx/helper.js')).toContain('export function splitJsxProps')
     expect(read('jsx/is-valid-prop.js')).toContain('"marginTop"')
     expect(read('types/index.d.ts')).toContain("export * from './jsx';")
-    expect(read('types/jsx.d.ts')).toContain('export type Styled = JsxFactory & JsxElements')
-    expect(read('jsx/index.d.ts')).toContain('export { HTMLStyledProps, StyledComponent, Styled, StyledVariantProps')
-  })
-
-  test('generated runtime files', async () => {
-    const { read } = await codegen()
-    await expect(read('jsx/factory.js')).toMatchFileSnapshot('__snapshots__/factory.js')
-    await expect(read('jsx/context-hosts.qwik.js')).toMatchFileSnapshot('__snapshots__/context-hosts.qwik.js')
-    await expect(read('jsx/create-slot-recipe-context.js')).toMatchFileSnapshot('__snapshots__/create-slot-recipe-context.js')
-    await expect(read('jsx/create-recipe-context.js')).toMatchFileSnapshot('__snapshots__/create-recipe-context.js')
-    await expect(read('jsx/stack.js')).toMatchFileSnapshot('__snapshots__/stack.js')
-    await expect(read('jsx/stack.d.ts')).toMatchFileSnapshot('__snapshots__/stack.d.ts')
-    await expect(read('types/jsx.d.ts')).toMatchFileSnapshot('__snapshots__/jsx.d.ts')
   })
 
   test('pattern bodies follow jsxStyleProps', async () => {
@@ -78,17 +89,31 @@ describe('pandacss-plugin-qwik', () => {
     expect(none.read('jsx/is-valid-prop.js')).not.toContain('"marginTop"')
   })
 
-  test('follows outExtension, forceImportExtension and jsxFactory', async () => {
-    const { read, files } = await codegen({ outExtension: 'mjs', forceImportExtension: true, jsxFactory: 'panda' })
-    expect(files).toContain('jsx/context-hosts.qwik.mjs')
-    expect(read('jsx/factory.mjs')).toContain("from '../css/index.mjs';")
-    expect(read('jsx/factory.mjs')).toContain('export const panda = ')
-    expect(read('jsx/create-slot-recipe-context.mjs')).toContain("from './context-hosts.qwik.mjs';")
-    expect(read('jsx/context-hosts.qwik.mjs')).toContain("import { panda } from './factory.mjs';")
-    expect(read('jsx/stack.mjs')).toContain("import { stackRaw } from '../patterns/stack.mjs';")
-    expect(read('types/jsx.d.mts')).toContain('export type Panda = JsxFactory & JsxElements')
-    expect(read('types/jsx.d.mts')).toContain('export type HTMLPandaProps<')
-    expect(read('types/jsx.d.mts')).toContain("from './system.mjs';")
+  test('keeps a design system\'s re-exported runtime, pointing contexts at its .qwik modules', () => {
+    const file = (path: string, code: string) => ({ path, code, dependencies: [] })
+    const reexport = (name: string) => `export * from '@acme/ds/jsx/${name}';`
+    const artifacts = rewriteArtifacts([
+      { id: 'jsx-factory', files: [file('jsx/factory.js', reexport('factory')), file('jsx/factory.d.ts', reexport('factory'))] },
+      { id: 'jsx-create-recipe-context', files: [file('jsx/create-recipe-context.js', reexport('create-recipe-context'))] },
+      {
+        id: 'jsx-create-slot-recipe-context',
+        files: [file('jsx/create-slot-recipe-context.d.ts', reexport('create-slot-recipe-context'))],
+      },
+      {
+        id: 'jsx-index',
+        files: [
+          file('jsx/index.js', "export * from './factory';\nexport * from './create-recipe-context';\nexport * from './create-slot-recipe-context';"),
+          file('jsx/index.d.ts', "export * from './create-recipe-context';\nexport { HTMLStyledProps, StyledComponent, Styled, StyledVariantProps, JsxFactoryOptions } from '../types/jsx';"),
+        ],
+      },
+      { id: 'jsx-patterns', files: [] },
+      { id: 'types', files: [] },
+    ])
+    const files = Object.fromEntries(artifacts.flatMap((artifact) => artifact.files).map((f) => [f.path, f.code]))
+    expect(files['jsx/factory.js']).toBe(reexport('factory'))
+    expect(files['jsx/create-recipe-context.qwik.js']).toBe(reexport('create-recipe-context.qwik'))
+    expect(files['jsx/create-slot-recipe-context.qwik.d.ts']).toBe(reexport('create-slot-recipe-context.qwik'))
+    expect(files['jsx/index.js']).toContain("export * from './create-slot-recipe-context.qwik';")
   })
 
   test('rejects other JSX frameworks', async () => {

@@ -1,7 +1,7 @@
 import { definePlugin } from '@pandacss/dev'
-import { rewriteArtifacts, type Artifact } from './rewrite.js'
+import { rewriteArtifacts, type Artifact, type RewriteOptions } from './rewrite.js'
 
-export type { Artifact, ArtifactFile } from './rewrite.js'
+export type { Artifact, ArtifactFile, RewriteOptions } from './rewrite.js'
 export { rewriteArtifacts }
 
 /**
@@ -13,16 +13,18 @@ export { rewriteArtifacts }
  * transform uses `class` like Qwik does. The Solid-specific files are then replaced.
  */
 export function pluginQwik() {
+  const options: RewriteOptions = {}
   return definePlugin({
     name: 'pandacss-plugin-qwik',
     hooks: {
       'config:resolved': ({ config }) => {
+        options.jsxStyleProps = config.jsxStyleProps
         if (config.jsxFramework === 'qwik') return { ...config, jsxFramework: 'solid' }
         if (config.jsxFramework !== 'solid') {
           throw new Error(`pandacss-plugin-qwik: set \`jsxFramework: 'qwik'\` (got ${JSON.stringify(config.jsxFramework)})`)
         }
       },
-      'codegen:prepare': ({ artifacts }) => rewriteArtifacts(artifacts as Artifact[]),
+      'codegen:prepare': ({ artifacts }) => rewriteArtifacts(artifacts as Artifact[], options),
     },
   })
 }

@@ -1,10 +1,17 @@
-import type { Component, FunctionComponent, PropsOf, QwikIntrinsicElements } from '@qwik.dev/core';
+import type { FunctionComponent, JSX, JSXChildren, JSXOutput, PropsOf } from '@qwik.dev/core';
 import type { RecipeDefinition, RecipeSelection, RecipeVariantRecord } from './recipe';
 import type { Assign, DistributiveUnion, JsxHTMLProps, JsxStyleProps, Pretty } from './system';
 
-export type ElementType = keyof QwikIntrinsicElements | Component<any> | FunctionComponent<any>
+export type ElementType = keyof JSX.IntrinsicElements | FunctionComponent<any>
 
-export type ComponentProps<T extends ElementType> = PropsOf<T>
+export type ComponentProps<T extends ElementType> = T extends keyof JSX.IntrinsicElements ? JSX.IntrinsicElements[T] : PropsOf<T>
+
+export type ContextProviderComponent<T> = FunctionComponent<{ value: T; children?: JSXChildren }>
+
+export interface RecipeContextOptions {
+  /** Context id, needed when one recipe backs more than one context */
+  id?: string | undefined
+}
 
 interface AnyProps {
   [k: string]: unknown
@@ -20,10 +27,9 @@ export interface AsProps {
   as?: ElementType | undefined
 }
 
-export type StyledComponentProps<T extends ElementType, P extends AnyProps = {}> = JsxHTMLProps<ComponentProps<T> & UnstyledProps & AsProps, Assign<JsxStyleProps, P>>
-
-export interface StyledComponent<T extends ElementType, P extends AnyProps = {}> extends Component<StyledComponentProps<T, P>> {
-  displayName?: string | undefined
+export interface StyledComponent<T extends ElementType, P extends AnyProps = {}> {
+  (props: JsxHTMLProps<ComponentProps<T> & UnstyledProps & AsProps, Assign<JsxStyleProps, P>>): JSXOutput
+  displayName?: string
 }
 
 interface RuntimeRecipeFn {
@@ -37,8 +43,10 @@ export interface JsxFactoryOptions<TProps extends AnyProps, F extends string = s
   forwardProps?: readonly F[]
 }
 
+// Filters the few forwarded keys; a nested conditional here hits TS2590 on components with many props.
 type ForwardedStyleKeys<T extends ElementType, F extends string> = Extract<Extract<F, keyof JsxStyleProps>, keyof ComponentProps<T>>
 
+/** Props `S`, with each forwarded prop that shares a style prop's name typed from the component. */
 export type WithForwardedProps<S, T extends ElementType, F extends string> = [ForwardedStyleKeys<T, F>] extends [never]
   ? S
   : Assign<S, Pick<ComponentProps<T>, ForwardedStyleKeys<T, F>>>
@@ -56,7 +64,7 @@ export interface JsxFactory {
 }
 
 export type JsxElements = {
-  [K in keyof QwikIntrinsicElements]: StyledComponent<K, {}>
+  [K in keyof JSX.IntrinsicElements]: StyledComponent<K, {}>
 }
 
 export type Styled = JsxFactory & JsxElements

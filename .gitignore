@@ -1,7 +1,9 @@
 node_modules
 dist
-example/styled-system
+example/styled-system*
 example/tmp
 example/server
 example/test-results
 __tests__/.tmp
+__tests__/qwik/styled-system
+__tests__/qwik/styled-system-ts
