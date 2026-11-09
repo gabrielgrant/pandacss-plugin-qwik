@@ -79,6 +79,10 @@ export default component$(() => {
         </button>
       </HStack>
 
+      <styled.span id="class-list" color="purple.700" class={['chip', { odd: count.value % 2 === 1, even: false }]}>
+        class list
+      </styled.span>
+
       <Fancy id="fancy" tone={count.value % 2 === 0 ? 'a' : 'b'} class="fancy">
         cva styled
       </Fancy>
@@ -89,6 +93,9 @@ export default component$(() => {
         <ChildTitle />
         <CardBody id="body" color="pink.700">
           Body text
+        </CardBody>
+        <CardBody id="listed-body" class={['listed', { odd: count.value % 2 === 1 }]}>
+          Class list body
         </CardBody>
         <CardBody id="unstyled" unstyled>
           Unstyled body

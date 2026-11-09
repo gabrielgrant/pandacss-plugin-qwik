@@ -1,9 +1,10 @@
-import { Slot, SkipRender, component$, createContextId, createSignal, isDev, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
+import { Slot, SkipRender, component$, createContextId, createSignal, isDev, isSignal, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
 import { styled } from './factory';
 import { getDisplayName, mergeDefaultProps } from './helper';
 import { toHash } from '../helpers';
 import type { AsProps, ComponentProps, ContextProviderComponent, DataAttrs, ElementType, JsxFactoryOptions, RecipeContextOptions, UnstyledProps, WithForwardedProps } from '../types/jsx';
-import type { FunctionComponent, JSXOutput, Signal } from '@qwik.dev/core';
+import type { ClassList, FunctionComponent, JSXOutput, Signal } from '@qwik.dev/core';
+import { cx } from '../css/index';
 import type { RecipeDefinition, RecipeRuntimeFn, RecipeSelection, RecipeVariantRecord } from '../types/recipe';
 import type { Assign, JsxHTMLProps, JsxStyleProps } from '../types/system';
 
@@ -66,6 +67,7 @@ function renderHost(Host: FunctionComponent<Props>, ctx: string, part: object | 
   const tick = createSignal(0)
   hostProps.__seen = tick.value
   hostProps.children ??= defaultChildren
+  if (hostProps.class != null) hostProps.class = toClassName(hostProps.class as ClassList)
   return jsx(Host, Object.assign(hostProps, { __ctx: ctx, __part: part, __tick: tick }))
 }
 
@@ -85,6 +87,13 @@ function contextId(prefix: string, recipe: object, name: string, options?: Recip
     contextSites.set(id, site)
   }
   return id
+}
+
+function toClassName(value: ClassList | Signal<ClassList> | undefined): string | undefined {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => (value as Record<string, unknown>)[key]))
 }
 
 type RecipeShape = Partial<Record<'__recipe__' | '__cva__' | 'base' | 'variants' | 'defaultVariants' | 'compoundVariants', unknown>>

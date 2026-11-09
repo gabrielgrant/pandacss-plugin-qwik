@@ -1,4 +1,4 @@
-import { Slot, SkipRender, component$, createContextId, createSignal, isDev, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
+import { Slot, SkipRender, component$, createContextId, createSignal, isDev, isSignal, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
 import { panda } from './factory.mjs';
 import { getDisplayName, mergeDefaultProps } from './helper.mjs';
 import { toHash } from '../helpers.mjs';
@@ -20,6 +20,7 @@ function renderHost(Host, ctx, part, props, defaultChildren) {
   const tick = createSignal(0)
   hostProps.__seen = tick.value
   hostProps.children ??= defaultChildren
+  if (hostProps.class != null) hostProps.class = toClassName(hostProps.class)
   return jsx(Host, Object.assign(hostProps, { __ctx: ctx, __part: part, __tick: tick }))
 }
 
@@ -39,6 +40,13 @@ function contextId(prefix, recipe, name, options) {
     contextSites.set(id, site)
   }
   return id
+}
+
+function toClassName(value) {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => value[key]))
 }
 
 function resolveSlotRecipe(recipe) {
@@ -103,7 +111,7 @@ const SlotProvider = component$((props) => {
   }
   const merged = contextProps ? mergeDefaultProps(contextProps, ownProps) : ownProps
   const [slots, variantProps, restProps] = useSlotStyles(__ctx, part, merged)
-  const defaultClass = part.options?.defaultProps?.class
+  const defaultClass = toClassName(part.options?.defaultProps?.class)
   if (restProps.class == null && defaultClass) restProps.class = defaultClass
   const resolvedProps = resolveProps(restProps, slots[part.slot])
   part.options?.forwardProps?.forEach((key) => {
@@ -123,7 +131,7 @@ const SlotConsumer = component$((props) => {
     return SkipRender
   }
   if (!slots) throw new Error(part.missing)
-  const defaultClass = part.options?.defaultProps?.class
+  const defaultClass = toClassName(part.options?.defaultProps?.class)
   const nextProps = ownProps.class == null && defaultClass ? { ...ownProps, class: defaultClass } : ownProps
   return renderSlot(part, resolveProps(nextProps, slots[part.slot]), slots)
 })

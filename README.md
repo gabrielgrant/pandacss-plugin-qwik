@@ -26,6 +26,9 @@ export default defineConfig({
 All `outExtension` values (`js`, `mjs`, `ts`), `forceImportExtension`, `jsxFactory` and `jsxStyleProps` modes are
 supported. Checked against `@pandacss/dev` 2.5.0 and `@qwik.dev/core` 2.0.0-rc.5.
 
+`class` takes anything Qwik accepts (a string, an array, an object of booleans, nested lists or a signal of one) on
+`styled`, pattern and recipe-context components, and is merged after Panda's classes.
+
 ## Recipe contexts in Qwik
 
 `createSlotRecipeContext` and `createRecipeContext` have the same API as Panda's React output (`withProvider`,
@@ -64,7 +67,6 @@ shape it relies on changes, codegen fails with an error naming the file.
 
 These come from Panda or Qwik and apply to native support too:
 
-- `class` must be a string on `styled` and recipe-context components. An array or object `class` is dropped.
 - With `pandacss({ transform: true })`, Panda's transform rewrites the `cva()` call inside the generated factory, so
   `styled(el, { base, variants })` with an inline config renders without its classes
   ([repro](https://github.com/gabrielgrant/panda-repro-transform-rewrites-factory-cva)). Use config recipes or leave

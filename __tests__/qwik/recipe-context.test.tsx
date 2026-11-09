@@ -198,6 +198,43 @@ describe('slot recipe context parts and options', () => {
   })
 })
 
+describe('class lists on recipe context parts', () => {
+  test('slot providers and consumers merge class lists after the slot classes', async () => {
+    const document = await render(
+      <Root visual="solid" class={['root', { open: true, closed: false }]}>
+        <Label class={['label', ['nested', { active: true }]]}>Click me</Label>
+      </Root>,
+    )
+
+    expect(document.querySelector('div')?.className).toBe('slot-button__root slot-button__root--visual_solid root open')
+    expect(document.querySelector('span')?.className).toBe(
+      'slot-button__root slot-button__root--visual_solid label nested active',
+    )
+  })
+
+  test('defaultProps can hold a class list', async () => {
+    const LabelWithDefault = withContext('span', 'root', { defaultProps: { class: ['fallback', { on: true }] } })
+
+    const document = await render(
+      <Root>
+        <LabelWithDefault>Click me</LabelWithDefault>
+      </Root>,
+    )
+
+    expect(document.querySelector('span')?.className).toBe(
+      'slot-button__root slot-button__root--visual_unstyled fallback on',
+    )
+  })
+
+  test('recipe context parts merge class lists', async () => {
+    const button = (await render(<Button visual="solid" class={{ picked: true, other: false }} />)).querySelector(
+      'button',
+    )!
+
+    expect(button.className).toBe('button button--visual_solid button--compound__visual_solid picked')
+  })
+})
+
 describe('slot recipe context PropsProvider', () => {
   test('PropsProvider sets variants and props on withProvider', async () => {
     const { withProvider, withContext, PropsProvider } = createSlotRecipeContext(slotButton, { id: 'props-a' })

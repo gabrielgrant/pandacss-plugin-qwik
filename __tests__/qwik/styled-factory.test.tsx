@@ -1,5 +1,5 @@
 /** @jsxImportSource @qwik.dev/core */
-import type { JSXOutput } from '@qwik.dev/core'
+import { createSignal, type ClassList, type JSXOutput, type Signal } from '@qwik.dev/core'
 import { ssrRenderToDom } from '@qwik.dev/core/testing'
 import { describe, expect, test } from 'vitest'
 import { Box, Stack, styled } from './styled-system/jsx'
@@ -244,5 +244,40 @@ describe('styled elements and patterns', () => {
         'div',
       ),
     ).toBe('c_blue.300 bg-c_green.300')
+  })
+})
+
+describe('class lists', () => {
+  const Button = styled('button', { base: { color: 'red.500' } })
+
+  test.each<[string, ClassList | Signal<ClassList>, string]>([
+    ['a string', 'one two', 'c_red.500 one two'],
+    ['an array', ['one', 'two'], 'c_red.500 one two'],
+    ['a record', { one: true, two: false, three: 1 }, 'c_red.500 one three'],
+    [
+      'nested values with falsy entries',
+      ['one', null, false, ['two', { three: true, four: false }], undefined],
+      'c_red.500 one two three',
+    ],
+    ['a signal', createSignal(['one', { two: true }]), 'c_red.500 one two'],
+  ])('styled.* merges %s after the recipe classes', async (_, value, expected) => {
+    expect(await classOf(<Button class={value}>Click me</Button>, 'button')).toBe(expected)
+  })
+
+  test('class and className both merge', async () => {
+    expect(await classOf(<Button class={['one', { two: true }]} className="three" />, 'button')).toBe(
+      'c_red.500 one two three',
+    )
+  })
+
+  test('unstyled keeps the class list', async () => {
+    expect(await classOf(<Button unstyled class={{ bare: true, other: false }} />, 'button')).toBe('bare')
+  })
+
+  test('patterns pass class lists through', async () => {
+    expect(await classOf(<Box color="red.300" class={['one', { two: true }]} />, 'div')).toBe('c_red.300 one two')
+    expect(await classOf(<Stack direction="column" class={{ stacked: true }} />, 'div')).toBe(
+      'd_flex flex-d_column gap_8px stacked',
+    )
   })
 })

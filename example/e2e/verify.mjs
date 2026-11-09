@@ -3,13 +3,13 @@
 //   npm run e2e              # starts the dev server (port 5351) and checks it
 //   npm run e2e -- preview   # checks the preview build (port 5352); run `npm run build.client && npm run build.preview` first
 //
-// Set CHROMIUM_PATH to use another Chromium.
+// Set CHROMIUM_PATH to use another Chromium, E2E_PORT to use another port.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
 
 const mode = process.argv[2] ?? 'dev'
-const port = mode === 'preview' ? 5352 : 5351
+const port = Number(process.env.E2E_PORT ?? (mode === 'preview' ? 5352 : 5351))
 const origin = `http://127.0.0.1:${port}`
 const viteArgs = mode === 'preview' ? ['preview'] : ['--mode', 'ssr']
 const executablePath = process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome'
@@ -81,6 +81,10 @@ try {
     assert.equal(await attr('title', 'data-slot'), 'title')
     assert.equal(await style('title', 'fontWeight'), '700')
   })
+  await check('array and object class values merge after Panda classes (SSR)', async () => {
+    assert.equal(await attr('class-list'), 'c_purple.700 chip')
+    assert.equal(await attr('listed-body'), 'card__body card__body--size_md listed')
+  })
   await check('unstyled drops slot styles', async () => assert.equal(await attr('unstyled'), ''))
   await check('defaultProps JSX children', async () => assert.equal((await text('default-title')).trim(), 'Default title'))
   await check('forwardProps passes a style prop through to the component', async () => {
@@ -127,6 +131,10 @@ try {
     await waitAttr('#child-title', 'card__title card__title--size_lg')
     await waitAttr('#body', 'c_pink.700 card__body card__body--size_lg')
     assert.equal(await attr('unstyled'), '')
+  })
+  await check('a class record toggled by a signal updates after resume', async () => {
+    await waitAttr('#class-list', 'c_purple.700 chip odd')
+    await waitAttr('#listed-body', 'card__body card__body--size_lg listed odd')
   })
   await check('cva variant after resume', async () => waitAttr('#fancy', 'fw_bold c_blue.600 fancy'))
   await check('sva variant change after resume', async () => waitAttr('#alert', 'd_flex gap_2 bd-w_1px bd-c_green.400'))

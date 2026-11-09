@@ -4,11 +4,11 @@ import { render } from './render.js'
 // Mirrors the Qwik factory of Panda's native codegen (crates/pandacss_codegen, qwik_jsx.rs).
 export const factoryModule = (n: TypeNames, format: ModuleFormat) => {
   const { importExt: x } = format
-  return render(`import { jsx } from '@qwik.dev/core';
+  return render(`import { isSignal, jsx } from '@qwik.dev/core';
 import { cx, cva } from '../css/index${x}';
 import { composeCvaFn, composeShouldForwardProps, getDisplayName, serializeSplitStyles, mergeDefaultProps, splitJsxProps } from './helper${x}';
 import { isCssProperty } from './is-valid-prop${x}';«
-import type { FunctionComponent, JSXChildren } from '@qwik.dev/core';
+import type { ClassList, FunctionComponent, JSXChildren, Signal } from '@qwik.dev/core';
 import type { JsxRecipeFn, ShouldForwardProp, StyledMarkers } from './helper${x}';
 import type { RecipeDefinition } from '../types/recipe${x}';
 import type { ElementType, ${n.upper} } from '../types/jsx${x}';
@@ -19,7 +19,7 @@ type StyledProps = {
   as?: ElementType
   unstyled?: boolean
   children?: JSXChildren
-  class?: string
+  class?: ClassList | Signal<ClassList>
   className?: string
 }
 
@@ -35,6 +35,13 @@ type StyledBase = ElementType & StyledMarkers & { __base__?: ElementType }
 type StyledComponentFn = FunctionComponent<StyledProps> & StyledMarkers & { displayName?: string }
 
 type RecipeInput = JsxRecipeFn | Props»
+
+function toClassName(value«: ClassList | Signal<ClassList> | undefined»)«: string | undefined» {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => «(»value« as Record<string, unknown>)»[key]))
+}
 
 function styledFn(BaseComponent«: StyledBase», recipeOrConfig«: RecipeInput» = {}, options«: StyledOptions» = {})«: StyledComponentFn» {
   const recipeFn = recipeOrConfig.__cva__ || recipeOrConfig.__recipe__ ? recipeOrConfig «as JsxRecipeFn »: cva(recipeOrConfig« as RecipeDefinition»)« as unknown as JsxRecipeFn»
@@ -75,19 +82,19 @@ function styledFn(BaseComponent«: StyledBase», recipeOrConfig«: RecipeInput»
     const hasStyles = propStyles || cssStyles !== void 0
     let className
     if (unstyled) {
-      className = cx(hasStyles && serializeSplitStyles(propStyles, cssStyles), combinedProps.class, combinedProps.className)
+      className = cx(hasStyles && serializeSplitStyles(propStyles, cssStyles), toClassName(combinedProps.class), combinedProps.className)
     } else if (recipeOrConfig.__recipe__) {
       const compoundVariantClasses = composedRecipeFn.__getCompoundVariantClasses__?.(variantProps)
       className = cx(
         composedRecipeFn(variantProps, false),
         compoundVariantClasses,
         hasStyles && serializeSplitStyles(propStyles, cssStyles),
-        combinedProps.class, combinedProps.className,
+        toClassName(combinedProps.class), combinedProps.className,
       )
     } else {
       className = cx(
         hasStyles ? serializeSplitStyles(propStyles, cssStyles, getRaw(variantProps)) : composedRecipeFn(variantProps),
-        combinedProps.class, combinedProps.className,
+        toClassName(combinedProps.class), combinedProps.className,
       )
     }
 

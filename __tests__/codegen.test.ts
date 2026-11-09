@@ -35,7 +35,7 @@ const syntaxErrors = (code: string, fileName: string) => {
   return (source as unknown as { parseDiagnostics: ts.Diagnostic[] }).parseDiagnostics.map((d) => d.messageText)
 }
 
-// Output of Panda's native Qwik codegen (gabrielgrant/panda, branch claude/v2-qwik-jsx at e909f7f5)
+// Output of Panda's native Qwik codegen (gabrielgrant/panda, branch claude/v2-qwik-jsx at 93e14384)
 // for the same options. The plugin must emit the same files byte for byte.
 const upstream = resolve(__dirname, 'upstream')
 const upstreamCases: Record<string, Record<string, unknown>> = {

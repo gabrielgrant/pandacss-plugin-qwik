@@ -1,7 +1,8 @@
-import { Slot, SkipRender, component$, createContextId, createSignal, isDev, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
+import { Slot, SkipRender, component$, createContextId, createSignal, isDev, isSignal, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
 import { panda } from './factory.mjs';
 import { getDisplayName, mergeDefaultProps } from './helper.mjs';
 import { toHash } from '../helpers.mjs';
+import { cx } from '../css/index.mjs';
 
 const styledPart = panda
 
@@ -19,6 +20,7 @@ function renderHost(Host, ctx, part, props, defaultChildren) {
   const tick = createSignal(0)
   hostProps.__seen = tick.value
   hostProps.children ??= defaultChildren
+  if (hostProps.class != null) hostProps.class = toClassName(hostProps.class)
   return jsx(Host, Object.assign(hostProps, { __ctx: ctx, __part: part, __tick: tick }))
 }
 
@@ -38,6 +40,13 @@ function contextId(prefix, recipe, name, options) {
     contextSites.set(id, site)
   }
   return id
+}
+
+function toClassName(value) {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => value[key]))
 }
 
 function resolveRecipe(recipe) {

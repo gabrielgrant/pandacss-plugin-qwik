@@ -12,12 +12,13 @@ const slotStyleProps: Record<JsxStylePropsMode, string> = {
 
 export const recipeContextModule = (n: TypeNames, format: ModuleFormat) => {
   const { importExt: x } = format
-  return render(`import { Slot, SkipRender, component$, createContextId, createSignal, isDev, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
+  return render(`import { Slot, SkipRender, component$, createContextId, createSignal, isDev, isSignal, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
 import { ${n.factory} } from './factory${x}';
 import { getDisplayName, mergeDefaultProps } from './helper${x}';
 import { toHash } from '../helpers${x}';«
 import type { AsProps, ComponentProps, ContextProviderComponent, DataAttrs, ElementType, JsxFactoryOptions, RecipeContextOptions, UnstyledProps, WithForwardedProps } from '../types/jsx${x}';
-import type { FunctionComponent, JSXOutput, Signal } from '@qwik.dev/core';
+import type { ClassList, FunctionComponent, JSXOutput, Signal } from '@qwik.dev/core';»
+import { cx } from '../css/index${x}';«
 import type { RecipeDefinition, RecipeRuntimeFn, RecipeSelection, RecipeVariantRecord } from '../types/recipe${x}';
 import type { Assign, JsxHTMLProps, JsxStyleProps } from '../types/system${x}';
 
@@ -80,6 +81,7 @@ function renderHost(Host«: FunctionComponent<Props>», ctx«: string», part«:
   const tick = createSignal(0)
   hostProps.__seen = tick.value
   hostProps.children ??= defaultChildren
+  if (hostProps.class != null) hostProps.class = toClassName(hostProps.class« as ClassList»)
   return jsx(Host, Object.assign(hostProps, { __ctx: ctx, __part: part, __tick: tick }))
 }
 
@@ -99,6 +101,13 @@ function contextId(prefix«: string», recipe«: object», name«: string», opt
     contextSites.set(id, site)
   }
   return id
+}
+
+function toClassName(value«: ClassList | Signal<ClassList> | undefined»)«: string | undefined» {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => «(»value« as Record<string, unknown>)»[key]))
 }
 
 «type RecipeShape = Partial<Record<'__recipe__' | '__cva__' | 'base' | 'variants' | 'defaultVariants' | 'compoundVariants', unknown>>
@@ -152,12 +161,12 @@ export function createRecipeContext«<R extends RecipeContextRecipe>»(recipeInp
 
 export const slotRecipeContextModule = (n: TypeNames, mode: JsxStylePropsMode, format: ModuleFormat) => {
   const { importExt: x } = format
-  return render(`import { Slot, SkipRender, component$, createContextId, createSignal, isDev, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
+  return render(`import { Slot, SkipRender, component$, createContextId, createSignal, isDev, isSignal, jsx, noSerialize, untrack, useContext, useContextProvider, useStore } from '@qwik.dev/core';
 import { ${n.factory} } from './factory${x}';
 import { getDisplayName, mergeDefaultProps } from './helper${x}';
 import { toHash } from '../helpers${x}';«
 import type { AsProps, ComponentProps, ContextProviderComponent, DataAttrs, ElementType, JsxFactoryOptions, RecipeContextOptions, UnstyledProps, WithForwardedProps } from '../types/jsx${x}';
-import type { FunctionComponent, JSXOutput, Signal } from '@qwik.dev/core';»
+import type { ClassList, FunctionComponent, JSXOutput, Signal } from '@qwik.dev/core';»
 import { ${mode === 'all' ? 'cx, sva' : 'cx, css, sva'} } from '../css/index${x}';«
 import type { RecipeSelection, SlotRecipeDefinition, SlotRecipeRuntimeFn, SlotRecipeVariantRecord } from '../types/recipe${x}';
 import type { Assign, JsxHTMLProps, JsxStyleProps, SystemStyleObject } from '../types/system${x}';
@@ -252,6 +261,7 @@ function renderHost(Host«: FunctionComponent<Props>», ctx«: string», part«:
   const tick = createSignal(0)
   hostProps.__seen = tick.value
   hostProps.children ??= defaultChildren
+  if (hostProps.class != null) hostProps.class = toClassName(hostProps.class« as ClassList»)
   return jsx(Host, Object.assign(hostProps, { __ctx: ctx, __part: part, __tick: tick }))
 }
 
@@ -271,6 +281,13 @@ function contextId(prefix«: string», recipe«: object», name«: string», opt
     contextSites.set(id, site)
   }
   return id
+}
+
+function toClassName(value«: ClassList | Signal<ClassList> | undefined»)«: string | undefined» {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => «(»value« as Record<string, unknown>)»[key]))
 }
 
 «type SlotStyles = Record<string, unknown> & { _classNameMap?: Record<string, string> }
@@ -371,7 +388,7 @@ const SlotProvider«: FunctionComponent<Props>» = component$«<Props>»((props)
   }
   const merged = contextProps ? mergeDefaultProps(contextProps, ownProps) : ownProps
   const [slots, variantProps, restProps] = useSlotStyles(__ctx« as string», part, merged)
-  const defaultClass = part.options?.defaultProps?.class
+  const defaultClass = toClassName(part.options?.defaultProps?.class« as ClassList»)
   if (restProps.class == null && defaultClass) restProps.class = defaultClass
   const resolvedProps = resolveProps(restProps, slots[part.slot])
   part.options?.forwardProps?.forEach((key) => {
@@ -391,7 +408,7 @@ const SlotConsumer«: FunctionComponent<Props>» = component$«<Props>»((props)
     return SkipRender
   }
   if (!slots) throw new Error(part.missing)
-  const defaultClass = part.options?.defaultProps?.class
+  const defaultClass = toClassName(part.options?.defaultProps?.class« as ClassList»)
   const nextProps = ownProps.class == null && defaultClass ? { ...ownProps, class: defaultClass } : ownProps
   return renderSlot(part, resolveProps(nextProps, slots[part.slot]), slots)
 })

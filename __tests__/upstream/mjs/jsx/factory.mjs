@@ -1,7 +1,14 @@
-import { jsx } from '@qwik.dev/core';
+import { isSignal, jsx } from '@qwik.dev/core';
 import { cx, cva } from '../css/index.mjs';
 import { composeCvaFn, composeShouldForwardProps, getDisplayName, serializeSplitStyles, mergeDefaultProps, splitJsxProps } from './helper.mjs';
 import { isCssProperty } from './is-valid-prop.mjs';
+
+function toClassName(value) {
+  if (isSignal(value)) return toClassName(value.value)
+  if (!value || typeof value === 'string') return value || undefined
+  if (Array.isArray(value)) return cx(...value.map(toClassName))
+  return cx(...Object.keys(value).filter((key) => value[key]))
+}
 
 function styledFn(BaseComponent, recipeOrConfig = {}, options = {}) {
   const recipeFn = recipeOrConfig.__cva__ || recipeOrConfig.__recipe__ ? recipeOrConfig : cva(recipeOrConfig)
@@ -42,19 +49,19 @@ function styledFn(BaseComponent, recipeOrConfig = {}, options = {}) {
     const hasStyles = propStyles || cssStyles !== void 0
     let className
     if (unstyled) {
-      className = cx(hasStyles && serializeSplitStyles(propStyles, cssStyles), combinedProps.class, combinedProps.className)
+      className = cx(hasStyles && serializeSplitStyles(propStyles, cssStyles), toClassName(combinedProps.class), combinedProps.className)
     } else if (recipeOrConfig.__recipe__) {
       const compoundVariantClasses = composedRecipeFn.__getCompoundVariantClasses__?.(variantProps)
       className = cx(
         composedRecipeFn(variantProps, false),
         compoundVariantClasses,
         hasStyles && serializeSplitStyles(propStyles, cssStyles),
-        combinedProps.class, combinedProps.className,
+        toClassName(combinedProps.class), combinedProps.className,
       )
     } else {
       className = cx(
         hasStyles ? serializeSplitStyles(propStyles, cssStyles, getRaw(variantProps)) : composedRecipeFn(variantProps),
-        combinedProps.class, combinedProps.className,
+        toClassName(combinedProps.class), combinedProps.className,
       )
     }
 
