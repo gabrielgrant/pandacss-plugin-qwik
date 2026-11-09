@@ -11,11 +11,12 @@ only means removing the plugin from `plugins`.
 
 ## Install
 
-Not on npm yet. Each release is a git tag whose commit includes the built `dist/`, so install from a tag:
+Not on npm yet. Each release is a `release/v<version>` branch whose commit includes the built `dist/`, so install
+from that branch:
 
 ```bash
-npm install -D github:gabrielgrant/pandacss-plugin-qwik#v0.3.1
-# or: bun add -d github:gabrielgrant/pandacss-plugin-qwik#v0.3.1
+npm install -D github:gabrielgrant/pandacss-plugin-qwik#release/v0.3.1
+# or: bun add -d github:gabrielgrant/pandacss-plugin-qwik#release/v0.3.1
 ```
 
 ## Usage
@@ -104,7 +105,8 @@ npm run build.client && npm run build.preview && npm run e2e -- preview
 ## Releasing
 
 Bump `version` in `package.json` on `main`, then run `scripts/release.sh`. It builds, commits `dist/` on a
-detached commit on top of `main`, and tags it `v<version>`. Push the tag with `git push origin v<version>`.
+detached commit on top of `main`, and points a new `release/v<version>` branch at it. Push it with
+`git push origin release/v<version>`. Release branches are never moved.
 
 ## License
 

@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# Tags a release whose commit includes the built dist/, so the plugin can be
-# installed from GitHub without a build step. Run on a clean main.
+# Publishes a release ref whose commit includes the built dist/, so the plugin
+# can be installed from GitHub without a build step. Run on a clean main.
+# Releases are branches (release/v<version>) rather than tags, so they can be
+# pushed from environments that only allow branch pushes. Never move one.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$(node -p 'require("./package.json").version')
-tag="v$version"
+ref="release/v$version"
 if [ -n "$(git status --porcelain)" ]; then echo "working tree not clean" >&2; exit 1; fi
-if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then echo "$tag already exists" >&2; exit 1; fi
+if git rev-parse -q --verify "refs/heads/$ref" >/dev/null; then echo "$ref already exists" >&2; exit 1; fi
 base=$(git rev-parse HEAD)
 npm run build
 git checkout -q --detach
 git add -f dist
-git commit -q -m "Release $tag (built dist)"
-git tag -a "$tag" -m "pandacss-plugin-qwik $tag"
+git commit -q -m "Release v$version (built dist)"
+git branch "$ref"
 git checkout -q -
-echo "tagged $tag on top of $base; push with: git push origin $tag"
+echo "created $ref on top of $base; push with: git push origin $ref"
