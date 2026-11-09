@@ -12,7 +12,7 @@ export { rewriteArtifacts }
  * still emits its config-derived `is-valid-prop` and the framework-neutral helpers, and the
  * transform uses `class` like Qwik does. The Solid-specific files are then replaced.
  */
-export function pluginQwik() {
+export function pluginQwik(): ReturnType<typeof definePlugin> {
   const options: RewriteOptions = {}
   return definePlugin({
     name: 'pandacss-plugin-qwik',

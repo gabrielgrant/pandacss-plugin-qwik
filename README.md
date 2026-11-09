@@ -15,8 +15,8 @@ Not on npm yet. Each release is a `release/v<version>` branch whose commit inclu
 from that branch:
 
 ```bash
-npm install -D github:gabrielgrant/pandacss-plugin-qwik#release/v0.3.1
-# or: bun add -d github:gabrielgrant/pandacss-plugin-qwik#release/v0.3.1
+npm install -D github:gabrielgrant/pandacss-plugin-qwik#release/v0.3.2
+# or: bun add -d github:gabrielgrant/pandacss-plugin-qwik#release/v0.3.2
 ```
 
 ## Usage
