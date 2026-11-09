@@ -9,10 +9,15 @@ import {
   Card,
   CardBody,
   CardFancy,
+  CardGlyph,
   CardLink,
+  CardNote,
   CardPropsProvider,
   CardRoot,
   CardTitle,
+  Menu,
+  MenuTitle,
+  Tag,
   useCardProps,
 } from '~/components/card'
 
@@ -28,11 +33,20 @@ const PropsReader = component$(() => {
 const ContextCard = component$(() => (
   <Card id="ctx-card">
     <CardTitle id="ctx-title">From props context</CardTitle>
+    <CardNote id="note">Plain function part</CardNote>
+    <CardGlyph id="glyph" />
     <PropsReader />
   </Card>
 ))
 
-const ContextBadge = component$(() => <Badge id="badge">badge</Badge>)
+const ContextBadge = component$(() => (
+  <>
+    <Badge id="badge">badge</Badge>
+    <Tag id="tag" color="tomato">
+      tag
+    </Tag>
+  </>
+))
 
 const Fancy = styled('button', { base: { fontWeight: 'bold' }, variants: { tone: { a: { color: 'red.600' }, b: { color: 'blue.600' } } } })
 
@@ -65,7 +79,7 @@ export default component$(() => {
         </button>
       </HStack>
 
-      <Fancy id="fancy" tone={count.value % 2 === 0 ? 'a' : 'b'} class={{ 'is-odd': count.value % 2 === 1 }}>
+      <Fancy id="fancy" tone={count.value % 2 === 0 ? 'a' : 'b'} class="fancy">
         cva styled
       </Fancy>
 
@@ -94,6 +108,13 @@ export default component$(() => {
       <CardRoot id="root-provider" size="lg">
         <CardTitle id="root-title">Root provider</CardTitle>
       </CardRoot>
+
+      {/* MenuTitle reads the `menu` context, not the closer `card` one */}
+      <Menu id="menu" size="lg">
+        <Card id="menu-card" size="md">
+          <MenuTitle id="menu-title">Menu title</MenuTitle>
+        </Card>
+      </Menu>
 
       <Alert id="alert" status={count.value % 2 === 0 ? 'warn' : 'ok'}>
         <AlertIcon id="alert-icon">!</AlertIcon>

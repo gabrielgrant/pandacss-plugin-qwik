@@ -26,6 +26,12 @@
       ],
       "~/*": [
         "./src/*"
+      ],
+      "styled-system-minimal/*": [
+        "./styled-system-minimal/*"
+      ],
+      "styled-system-none/*": [
+        "./styled-system-none/*"
       ]
     }
   },
