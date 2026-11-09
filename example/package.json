@@ -1,0 +1,29 @@
+{
+  "name": "plugin-qwik-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "panda codegen",
+    "dev": "vite --mode ssr --port 5351 --strictPort",
+    "build": "qwik build",
+    "build.client": "vite build",
+    "build.preview": "vite build --ssr src/entry.preview.tsx",
+    "build.types": "tsc --noEmit",
+    "preview": "qwik build preview && vite preview --port 5352 --strictPort",
+    "e2e": "node e2e/verify.mjs",
+    "qwik": "qwik"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "2.5.0",
+    "@pandacss/preset-base": "2.5.0",
+    "@pandacss/preset-panda": "2.5.0",
+    "@pandacss/vite": "2.5.0",
+    "@qwik.dev/core": "2.0.0-rc.4",
+    "@qwik.dev/router": "2.0.0-rc.4",
+    "@types/node": "^22.0.0",
+    "pandacss-plugin-qwik": "file:..",
+    "playwright-core": "^1.55.0",
+    "typescript": "5.9.3",
+    "vite": "8.2.4"
+  }
+}
