@@ -9,6 +9,15 @@ Panda 2 has no Qwik target yet. Native support is being worked on in
 This plugin emits the same files as that branch, byte for byte, so moving to native support later
 only means removing the plugin from `plugins`.
 
+## Install
+
+Not on npm yet. Each release is a git tag whose commit includes the built `dist/`, so install from a tag:
+
+```bash
+npm install -D github:gabrielgrant/pandacss-plugin-qwik#v0.3.1
+# or: bun add -d github:gabrielgrant/pandacss-plugin-qwik#v0.3.1
+```
+
 ## Usage
 
 ```ts
@@ -91,6 +100,11 @@ npm ci
 npm run e2e                                              # dev server
 npm run build.client && npm run build.preview && npm run e2e -- preview
 ```
+
+## Releasing
+
+Bump `version` in `package.json` on `main`, then run `scripts/release.sh`. It builds, commits `dist/` on a
+detached commit on top of `main`, and tags it `v<version>`. Push the tag with `git push origin v<version>`.
 
 ## License
 
